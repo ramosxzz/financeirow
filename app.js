@@ -298,8 +298,11 @@ function isProjectCompleted(project) {
 }
 
 function projectBalance(project) {
-  if (isProjectCompleted(project)) return 0;
   return Math.max(project.value - project.received, 0);
+}
+
+function isProjectPaid(project) {
+  return projectBalance(project) === 0 && project.value > 0;
 }
 
 function projectName(projectId) {
@@ -349,6 +352,7 @@ function renderMetrics() {
   const month = refs.referenceMonth.value;
   const monthPayments = state.payments.filter((payment) => isSameMonth(payment.date, month));
   const receivable = monthPayments.reduce((total, payment) => total + payment.amount, 0);
+  const currentBalance = state.projects.reduce((total, project) => total + project.received, 0);
   const recurringMonthly = state.recurring
     .filter((item) => item.status === "Ativa")
     .reduce((total, item) => {
@@ -357,12 +361,13 @@ function renderMetrics() {
       return total + item.amount;
     }, 0);
   const openProjects = state.projects.filter((project) => !isProjectCompleted(project));
-  const pipeline = openProjects.reduce((total, project) => total + projectBalance(project), 0);
+  const pipeline = state.projects.reduce((total, project) => total + projectBalance(project), 0);
   const active = openProjects.length;
 
   $("#metricReceived").textContent = money.format(receivable);
   $("#metricRecurring").textContent = money.format(recurringMonthly);
   $("#metricPipeline").textContent = money.format(pipeline);
+  $("#metricCurrentBalance").textContent = money.format(currentBalance);
   $("#metricActiveProjects").textContent = active;
 }
 
@@ -391,7 +396,9 @@ function renderProjects() {
     refs.projectTable.innerHTML = projects
       .map((project) => {
         const balance = projectBalance(project);
-        const balanceLabel = isProjectCompleted(project) ? "concluído" : `de ${money.format(project.value)}`;
+        const balanceLabel = isProjectPaid(project)
+          ? "pago"
+          : `${money.format(project.received)} recebido de ${money.format(project.value)}`;
         return `
           <tr>
             <td>
