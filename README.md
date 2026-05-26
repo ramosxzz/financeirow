@@ -23,6 +23,7 @@ O deploy publica somente a pasta `dist/`.
 Em ambiente não interativo, defina um token da Cloudflare antes do deploy:
 
 ```bash
+export CLOUDFLARE_ACCOUNT_ID="seu_account_id"
 export CLOUDFLARE_API_TOKEN="seu_token"
 npm run deploy
 ```
