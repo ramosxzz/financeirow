@@ -8,6 +8,6 @@
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name solairew-financeiro"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^3.114.15"
   }
 }
