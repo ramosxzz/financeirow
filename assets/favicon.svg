@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SolAire W+">
+  <rect width="64" height="64" rx="14" fill="#0f1113"/>
+  <path fill="#fff" d="M12 18h9l5 24 6-24h8l6 24 5-24h9L50 48h-8l-6-22-6 22h-8L12 18Z"/>
+  <path fill="#fff" d="M50 10h5v7h7v5h-7v7h-5v-7h-7v-5h7v-7Z"/>
+</svg>
