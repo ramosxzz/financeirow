@@ -293,6 +293,15 @@ function isSameMonth(date, month) {
   return String(date || "").slice(0, 7) === month;
 }
 
+function isProjectCompleted(project) {
+  return normalizeProjectStatus(project.status) === "Concluído";
+}
+
+function projectBalance(project) {
+  if (isProjectCompleted(project)) return 0;
+  return Math.max(project.value - project.received, 0);
+}
+
 function projectName(projectId) {
   if (!projectId) return "Sem projeto";
   return state.projects.find((project) => project.id === projectId)?.name || "Projeto removido";
@@ -347,9 +356,9 @@ function renderMetrics() {
       if (item.frequency === "Anual") return total + item.amount / 12;
       return total + item.amount;
     }, 0);
-  const developmentProjects = state.projects.filter((project) => project.status === "Em desenvolvimento");
-  const pipeline = developmentProjects.reduce((total, project) => total + Math.max(project.value - project.received, 0), 0);
-  const active = state.projects.filter((project) => !["Concluído", "Concluido"].includes(project.status)).length;
+  const openProjects = state.projects.filter((project) => !isProjectCompleted(project));
+  const pipeline = openProjects.reduce((total, project) => total + projectBalance(project), 0);
+  const active = openProjects.length;
 
   $("#metricReceived").textContent = money.format(receivable);
   $("#metricRecurring").textContent = money.format(recurringMonthly);
@@ -381,7 +390,8 @@ function renderProjects() {
   } else {
     refs.projectTable.innerHTML = projects
       .map((project) => {
-        const balance = Math.max(project.value - project.received, 0);
+        const balance = projectBalance(project);
+        const balanceLabel = isProjectCompleted(project) ? "concluído" : `de ${money.format(project.value)}`;
         return `
           <tr>
             <td>
@@ -392,7 +402,7 @@ function renderProjects() {
             <td>${statusBadge(project.status)}</td>
             <td>
               <span class="money">${money.format(balance)}</span>
-              <div class="muted">de ${money.format(project.value)}</div>
+              <div class="muted">${balanceLabel}</div>
             </td>
             <td>
               <div class="row-actions">
@@ -407,7 +417,7 @@ function renderProjects() {
   }
 
   const overview = state.projects
-    .filter((project) => !["Concluído", "Concluido"].includes(project.status))
+    .filter((project) => !isProjectCompleted(project))
     .slice(0, 5);
 
   if (!overview.length) {
