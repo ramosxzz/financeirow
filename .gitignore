@@ -1,0 +1,6 @@
+dist/
+node_modules/
+.wrangler/
+.git-data/
+.DS_Store
+npm-debug.log*

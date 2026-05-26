@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SolAire W+ Financeiro</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="assets/solairew-logo.png" alt="SolAire W+" />
+          <span>Financeiro interno</span>
+        </div>
+
+        <nav class="nav-tabs" aria-label="Navegação principal">
+          <button class="nav-tab active" type="button" data-tab="overview">Dashboard</button>
+          <button class="nav-tab" type="button" data-tab="projects">Projetos</button>
+          <button class="nav-tab" type="button" data-tab="payments">Recebidos</button>
+          <button class="nav-tab" type="button" data-tab="recurring">Recorrentes</button>
+        </nav>
+
+        <div class="sidebar-actions">
+          <button class="ghost-button" type="button" id="exportData">Exportar backup</button>
+          <label class="ghost-button file-button" for="importData">Importar backup</label>
+          <input id="importData" type="file" accept="application/json" />
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Controle financeiro</p>
+            <h1>Projetos, entradas e recorrências</h1>
+            <p class="sync-status" id="syncStatus">Conectando ao Supabase...</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="theme-toggle" type="button" id="themeToggle" aria-label="Alternar modo escuro">
+              <span class="theme-switch" aria-hidden="true">
+                <span class="theme-switch-thumb"></span>
+              </span>
+              <span id="themeLabel">Escuro</span>
+            </button>
+            <div class="month-filter">
+              <label for="referenceMonth">Mês de referência</label>
+              <input id="referenceMonth" type="month" />
+            </div>
+          </div>
+        </header>
+
+        <section class="tab-panel active" id="overview">
+          <div class="metrics-grid">
+            <article class="metric">
+              <span>Recebido no mês</span>
+              <strong id="metricReceived">R$ 0,00</strong>
+            </article>
+            <article class="metric">
+              <span>Recorrência mensal</span>
+              <strong id="metricRecurring">R$ 0,00</strong>
+            </article>
+            <article class="metric">
+              <span>Projetos em desenvolvimento</span>
+              <strong id="metricPipeline">R$ 0,00</strong>
+            </article>
+            <article class="metric">
+              <span>Projetos ativos</span>
+              <strong id="metricActiveProjects">0</strong>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Projetos em andamento</h2>
+                <button class="text-button" type="button" data-go-tab="projects">Ver todos</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Projeto</th>
+                      <th>Cliente</th>
+                      <th>Status</th>
+                      <th>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody id="overviewProjects"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Próximas recorrências</h2>
+                <button class="text-button" type="button" data-go-tab="recurring">Ver todas</button>
+              </div>
+              <div class="stack-list" id="overviewRecurring"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="projects">
+          <div class="split-layout">
+            <form class="form-panel" id="projectForm">
+              <h2>Novo projeto</h2>
+              <input type="hidden" name="id" />
+              <label>
+                Nome do projeto
+                <input name="name" type="text" placeholder="Ex: Plataforma web" required />
+              </label>
+              <label>
+                Cliente
+                <input name="client" type="text" placeholder="Nome do cliente" required />
+              </label>
+              <div class="form-row">
+                <label>
+                  Valor contratado
+                  <input name="value" type="number" min="0" step="0.01" placeholder="0,00" required />
+                </label>
+                <label>
+                  Recebido até agora
+                  <input name="received" type="number" min="0" step="0.01" placeholder="0,00" />
+                </label>
+              </div>
+              <div class="form-row">
+                <label>
+                  Status
+                  <select name="status">
+                    <option>Em desenvolvimento</option>
+                    <option>Aguardando início</option>
+                    <option>Pausado</option>
+                    <option>Concluído</option>
+                  </select>
+                </label>
+                <label>
+                  Entrega prevista
+                  <input name="dueDate" type="date" />
+                </label>
+              </div>
+              <label>
+                Observações
+                <textarea name="notes" rows="3" placeholder="Detalhes do projeto, combinados ou pendências"></textarea>
+              </label>
+              <div class="form-actions">
+                <button class="primary-button" type="submit">Salvar projeto</button>
+                <button class="ghost-button" type="reset">Limpar</button>
+              </div>
+            </form>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Projetos cadastrados</h2>
+                <input class="search" id="projectSearch" type="search" placeholder="Buscar projeto ou cliente" />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Projeto</th>
+                      <th>Cliente</th>
+                      <th>Status</th>
+                      <th>Saldo</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="projectTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="payments">
+          <div class="split-layout">
+            <form class="form-panel" id="paymentForm">
+              <h2>Novo recebimento</h2>
+              <input type="hidden" name="id" />
+              <label>
+                Descrição
+                <input name="description" type="text" placeholder="Ex: Entrada do projeto X" required />
+              </label>
+              <div class="form-row">
+                <label>
+                  Valor recebido
+                  <input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
+                </label>
+                <label>
+                  Data
+                  <input name="date" type="date" required />
+                </label>
+              </div>
+              <label>
+                Projeto vinculado
+                <select name="projectId" id="paymentProject"></select>
+              </label>
+              <label>
+                Forma de pagamento
+                <select name="method">
+                  <option>Pix</option>
+                  <option>Cartão</option>
+                  <option>Boleto</option>
+                  <option>Transferência</option>
+                  <option>Dinheiro</option>
+                </select>
+              </label>
+              <div class="form-actions">
+                <button class="primary-button" type="submit">Salvar recebimento</button>
+                <button class="ghost-button" type="reset">Limpar</button>
+              </div>
+            </form>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Entradas recebidas</h2>
+                <input class="search" id="paymentSearch" type="search" placeholder="Buscar recebimento" />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Descrição</th>
+                      <th>Data</th>
+                      <th>Projeto</th>
+                      <th>Valor</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="paymentTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="recurring">
+          <div class="split-layout">
+            <form class="form-panel" id="recurringForm">
+              <h2>Nova recorrência</h2>
+              <input type="hidden" name="id" />
+              <label>
+                Descrição
+                <input name="description" type="text" placeholder="Ex: Manutenção mensal" required />
+              </label>
+              <div class="form-row">
+                <label>
+                  Valor
+                  <input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
+                </label>
+                <label>
+                  Vencimento
+                  <input name="day" type="number" min="1" max="31" placeholder="Dia" required />
+                </label>
+              </div>
+              <div class="form-row">
+                <label>
+                  Frequência
+                  <select name="frequency">
+                    <option>Mensal</option>
+                    <option>Trimestral</option>
+                    <option>Anual</option>
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select name="status">
+                    <option>Ativa</option>
+                    <option>Pausada</option>
+                    <option>Cancelada</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                Cliente
+                <input name="client" type="text" placeholder="Cliente ou contrato" />
+              </label>
+              <div class="form-actions">
+                <button class="primary-button" type="submit">Salvar recorrência</button>
+                <button class="ghost-button" type="reset">Limpar</button>
+              </div>
+            </form>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Transações recorrentes</h2>
+                <input class="search" id="recurringSearch" type="search" placeholder="Buscar recorrência" />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Descrição</th>
+                      <th>Cliente</th>
+                      <th>Vencimento</th>
+                      <th>Valor</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="recurringTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="emptyRowTemplate">
+      <tr>
+        <td colspan="6" class="empty-state">Nenhum registro encontrado.</td>
+      </tr>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
