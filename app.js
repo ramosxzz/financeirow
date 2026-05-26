@@ -99,7 +99,7 @@ function projectFromDatabase(project) {
     client: project.client,
     value: numberValue(project.value),
     received: numberValue(project.received),
-    status: project.status,
+    status: normalizeProjectStatus(project.status),
     dueDate: project.due_date || "",
     notes: project.notes || "",
   };
@@ -114,6 +114,15 @@ function paymentFromDatabase(payment) {
     projectId: payment.project_id || "",
     method: payment.method,
   };
+}
+
+function normalizeProjectStatus(status) {
+  const statusMap = {
+    "Aguardando inicio": "Aguardando início",
+    Concluido: "Concluído",
+  };
+
+  return statusMap[status] || status || "Em desenvolvimento";
 }
 
 function recurringFromDatabase(item) {
@@ -330,7 +339,7 @@ function renderEmpty(tbody, columns = 6) {
 function renderMetrics() {
   const month = refs.referenceMonth.value;
   const monthPayments = state.payments.filter((payment) => isSameMonth(payment.date, month));
-  const received = monthPayments.reduce((total, payment) => total + payment.amount, 0);
+  const receivable = monthPayments.reduce((total, payment) => total + payment.amount, 0);
   const recurringMonthly = state.recurring
     .filter((item) => item.status === "Ativa")
     .reduce((total, item) => {
@@ -342,7 +351,7 @@ function renderMetrics() {
   const pipeline = developmentProjects.reduce((total, project) => total + Math.max(project.value - project.received, 0), 0);
   const active = state.projects.filter((project) => !["Concluído", "Concluido"].includes(project.status)).length;
 
-  $("#metricReceived").textContent = money.format(received);
+  $("#metricReceived").textContent = money.format(receivable);
   $("#metricRecurring").textContent = money.format(recurringMonthly);
   $("#metricPipeline").textContent = money.format(pipeline);
   $("#metricActiveProjects").textContent = active;
@@ -529,13 +538,21 @@ async function upsert(collection, data) {
   const record = data.id ? data : { ...data, id: createId() };
 
   if (databaseOnline) {
-    const savedRows = await supabaseRequest(TABLES[collection], {
-      method: "POST",
-      headers: {
-        Prefer: "resolution=merge-duplicates,return=representation",
-      },
-      body: JSON.stringify(toDatabase(collection, record)),
-    });
+    const savedRows = data.id
+      ? await supabaseRequest(`${TABLES[collection]}?id=eq.${encodeURIComponent(data.id)}`, {
+          method: "PATCH",
+          headers: {
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify(toDatabase(collection, record)),
+        })
+      : await supabaseRequest(TABLES[collection], {
+          method: "POST",
+          headers: {
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify(toDatabase(collection, record)),
+        });
     const saved = fromDatabase(collection, savedRows)[0];
     state[collection] = state[collection].some((item) => item.id === saved.id)
       ? state[collection].map((item) => (item.id === saved.id ? saved : item))
@@ -552,8 +569,16 @@ async function upsert(collection, data) {
 
 function fillForm(form, data) {
   Object.entries(data).forEach(([key, value]) => {
-    if (form.elements[key]) form.elements[key].value = value ?? "";
+    if (!form.elements[key]) return;
+    const nextValue = form === refs.projectForm && key === "status" ? normalizeProjectStatus(value) : value;
+    form.elements[key].value = nextValue ?? "";
   });
+}
+
+function focusForm(form) {
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  const firstInput = form.querySelector("input:not([type='hidden']), select, textarea");
+  firstInput?.focus({ preventScroll: true });
 }
 
 function resetFormTitle(form, title) {
@@ -600,10 +625,10 @@ async function handlePaymentSubmit(event) {
       method: data.method,
     });
 
-    resetFormTitle(form, "Novo recebimento");
+    resetFormTitle(form, "Novo valor a receber");
     form.elements.date.value = todayISO();
   } catch (error) {
-    alert(`Não foi possível salvar o recebimento. ${error.message}`);
+    alert(`Não foi possível salvar o valor a receber. ${error.message}`);
   }
 }
 
@@ -659,7 +684,7 @@ function bindEvents() {
 
   refs.projectForm.addEventListener("reset", () => setTimeout(() => resetFormTitle(refs.projectForm, "Novo projeto")));
   refs.paymentForm.addEventListener("reset", () => setTimeout(() => {
-    resetFormTitle(refs.paymentForm, "Novo recebimento");
+    resetFormTitle(refs.paymentForm, "Novo valor a receber");
     refs.paymentForm.elements.date.value = todayISO();
   }));
   refs.recurringForm.addEventListener("reset", () => setTimeout(() => resetFormTitle(refs.recurringForm, "Nova recorrência")));
@@ -677,18 +702,19 @@ function bindEvents() {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
-    const projectId = target.dataset.editProject;
-    const deleteProjectId = target.dataset.deleteProject;
-    const paymentId = target.dataset.editPayment;
-    const deletePaymentId = target.dataset.deletePayment;
-    const recurringId = target.dataset.editRecurring;
-    const deleteRecurringId = target.dataset.deleteRecurring;
+    const projectId = target.closest("[data-edit-project]")?.dataset.editProject;
+    const deleteProjectId = target.closest("[data-delete-project]")?.dataset.deleteProject;
+    const paymentId = target.closest("[data-edit-payment]")?.dataset.editPayment;
+    const deletePaymentId = target.closest("[data-delete-payment]")?.dataset.deletePayment;
+    const recurringId = target.closest("[data-edit-recurring]")?.dataset.editRecurring;
+    const deleteRecurringId = target.closest("[data-delete-recurring]")?.dataset.deleteRecurring;
 
     if (projectId) {
       const project = state.projects.find((item) => item.id === projectId);
       if (!project) return;
       fillForm(refs.projectForm, project);
       refs.projectForm.querySelector("h2").textContent = "Editar projeto";
+      focusForm(refs.projectForm);
     }
 
     if (deleteProjectId && confirm("Excluir este projeto?")) {
@@ -699,11 +725,12 @@ function bindEvents() {
       const payment = state.payments.find((item) => item.id === paymentId);
       if (!payment) return;
       fillForm(refs.paymentForm, payment);
-      refs.paymentForm.querySelector("h2").textContent = "Editar recebimento";
+      refs.paymentForm.querySelector("h2").textContent = "Editar valor a receber";
+      focusForm(refs.paymentForm);
     }
 
-    if (deletePaymentId && confirm("Excluir este recebimento?")) {
-      deleteItem("payments", deletePaymentId).catch((error) => alert(`Não foi possível excluir o recebimento. ${error.message}`));
+    if (deletePaymentId && confirm("Excluir este valor a receber?")) {
+      deleteItem("payments", deletePaymentId).catch((error) => alert(`Não foi possível excluir o valor a receber. ${error.message}`));
     }
 
     if (recurringId) {
@@ -711,6 +738,7 @@ function bindEvents() {
       if (!recurring) return;
       fillForm(refs.recurringForm, recurring);
       refs.recurringForm.querySelector("h2").textContent = "Editar recorrência";
+      focusForm(refs.recurringForm);
     }
 
     if (deleteRecurringId && confirm("Excluir esta recorrência?")) {

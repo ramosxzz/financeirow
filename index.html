@@ -19,7 +19,7 @@
         <nav class="nav-tabs" aria-label="Navegação principal">
           <button class="nav-tab active" type="button" data-tab="overview">Dashboard</button>
           <button class="nav-tab" type="button" data-tab="projects">Projetos</button>
-          <button class="nav-tab" type="button" data-tab="payments">Recebidos</button>
+          <button class="nav-tab" type="button" data-tab="payments">A receber</button>
           <button class="nav-tab" type="button" data-tab="recurring">Recorrentes</button>
         </nav>
 
@@ -54,7 +54,7 @@
         <section class="tab-panel active" id="overview">
           <div class="metrics-grid">
             <article class="metric">
-              <span>Recebido no mês</span>
+              <span>A receber no mês</span>
               <strong id="metricReceived">R$ 0,00</strong>
             </article>
             <article class="metric">
@@ -176,19 +176,19 @@
         <section class="tab-panel" id="payments">
           <div class="split-layout">
             <form class="form-panel" id="paymentForm">
-              <h2>Novo recebimento</h2>
+              <h2>Novo valor a receber</h2>
               <input type="hidden" name="id" />
               <label>
                 Descrição
-                <input name="description" type="text" placeholder="Ex: Entrada do projeto X" required />
+                <input name="description" type="text" placeholder="Ex: Parcela final do projeto X" required />
               </label>
               <div class="form-row">
                 <label>
-                  Valor recebido
+                  Valor a receber
                   <input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
                 </label>
                 <label>
-                  Data
+                  Data prevista
                   <input name="date" type="date" required />
                 </label>
               </div>
@@ -197,7 +197,7 @@
                 <select name="projectId" id="paymentProject"></select>
               </label>
               <label>
-                Forma de pagamento
+                Forma prevista
                 <select name="method">
                   <option>Pix</option>
                   <option>Cartão</option>
@@ -207,22 +207,22 @@
                 </select>
               </label>
               <div class="form-actions">
-                <button class="primary-button" type="submit">Salvar recebimento</button>
+                <button class="primary-button" type="submit">Salvar valor</button>
                 <button class="ghost-button" type="reset">Limpar</button>
               </div>
             </form>
 
             <section class="panel">
               <div class="panel-heading">
-                <h2>Entradas recebidas</h2>
-                <input class="search" id="paymentSearch" type="search" placeholder="Buscar recebimento" />
+                <h2>Valores a receber</h2>
+                <input class="search" id="paymentSearch" type="search" placeholder="Buscar valor a receber" />
               </div>
               <div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
                       <th>Descrição</th>
-                      <th>Data</th>
+                      <th>Previsão</th>
                       <th>Projeto</th>
                       <th>Valor</th>
                       <th></th>
